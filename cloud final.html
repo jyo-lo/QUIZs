@@ -1,0 +1,367 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Cloud Quiz</title>
+  <style>
+    body {
+      margin: 0;
+      font-family: 'Segoe UI', sans-serif;
+      background-color: #04254a;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      overflow: hidden;
+    }
+    #container {
+      width: 90%;
+      max-width: 1000px;
+      display: flex;
+      background-color: #fff;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+      border-radius: 20px;
+      overflow: hidden;
+      animation: fadeIn 1s ease-in-out;
+    }
+    #image-section {
+      background-color: #ffffff;
+      width: 50%;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      padding: 20px;
+    }
+    #image-section img {
+      width: 100%;
+      max-width: 400px;
+      animation: float 3s ease-in-out infinite;
+    }
+    @keyframes float {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(-10px); }
+    }
+    #form-section {
+      background-color: #4475f2;
+      color: #04254a;
+      padding: 40px;
+      width: 50%;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      position: relative;
+      overflow-y: auto;
+    }
+    h1 {
+      text-align: center;
+      font-size: 2rem;
+      margin-bottom: 30px;
+    }
+    input[type="text"], input[type="password"] {
+      width: 100%;
+      padding: 12px;
+      margin-bottom: 15px;
+      border: none;
+      border-radius: 8px;
+      font-size: 1rem;
+    }
+    button {
+      padding: 12px;
+      background-color: #04254a;
+      color: #4475f2;
+      font-weight: bold;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: all 0.3s ease;
+    }
+    button:hover {
+      background-color: #04254a;
+    }
+    #timer {
+      position: sticky;
+      top: 0;
+      font-size: 1.2rem;
+      font-weight: bold;
+      color: #04254a;
+      background-color: rgba(0, 0, 0, 0.2);
+      padding: 5px 15px;
+      border-radius: 20px;
+      margin-bottom: 10px;
+      text-align: center;
+    }
+    .quiz-question {
+      background-color: #5c8dfb;
+      margin: 10px 0;
+      padding: 20px;
+      border-radius: 10px;
+      display: none;
+      flex-direction: column;
+      justify-content: center;
+      align-items: flex-start;
+      text-align: left;
+    }
+    .quiz-option {
+      margin: 8px 0;
+      display: flex;
+      align-items: center;
+    }
+    .quiz-option input[type="radio"] {
+      margin-right: 10px;
+    }
+    .quiz-option label {
+      font-size: 1rem;
+      cursor: pointer;
+    }
+    .result {
+      margin-top: 20px;
+      font-size: 1rem;
+      text-align: center;
+    }
+    .correct-answer {
+      background-color: #a6f1a6;
+      border-radius: 5px;
+      padding: 5px;
+    }
+    .incorrect-answer {
+      background-color: #ffb3b3;
+      border-radius: 5px;
+      padding: 5px;
+    }
+    #navigation {
+      display: flex;
+      justify-content: space-between;
+      margin-top: 15px;
+    }
+    #final-submit {
+      margin-top: 20px;
+      background-color: #ffffff;
+      color: #4475f2;
+      border-radius: 20px;
+      border: 2px solid #4475f2;
+      cursor: pointer;
+      width: 100%;
+    }
+    #quiz-container {
+      max-height: 400px;
+      overflow-y: auto;
+    }
+    #submit-warning {
+      text-align: center;
+      margin-top: 10px;
+      color: yellow;
+      font-weight: bold;
+    }
+  </style>
+</head>
+<body>
+  <div id="container">
+    <div id="image-section">
+      <img src="enter.jpg" alt="Quiz Illustration" />
+    </div>
+    <div id="form-section">
+      <h1>CLOUD QUIZ</h1>
+      <form id="userForm">
+        <input type="text" id="username" name="username" placeholder="Username" required />
+        <input type="password" id="password" name="password" placeholder="Password" required />
+        <button type="submit" id="action-button">REGISTER</button>
+        <p id="status-message"></p>
+      </form>
+
+      <form id="quizForm" style="display: none;">
+        <div id="timer">Time Left: 9:59</div>
+        <div id="quiz-container"></div>
+        <div id="navigation">
+          <button type="button" id="prevBtn">Previous</button>
+          <button type="button" id="nextBtn">Next</button>
+        </div>
+        <button type="submit" id="final-submit">Submit Quiz</button>
+        <div id="submit-warning"></div>
+        <div class="result" id="final-result-message"></div>
+      </form>
+    </div>
+  </div>
+
+  <script>
+    let isRegistering = true;
+    let registeredUsername = "", registeredPassword = "";
+    let timer, countdown = 599;
+    let currentQuestionIndex = 0;
+
+    const form = document.getElementById("userForm");
+    const actionButton = document.getElementById("action-button");
+    const statusMsg = document.getElementById("status-message");
+    const quizForm = document.getElementById("quizForm");
+    const quizContainer = document.getElementById("quiz-container");
+    const finalResultMsg = document.getElementById("final-result-message");
+    const timerEl = document.getElementById("timer");
+    const prevBtn = document.getElementById("prevBtn");
+    const nextBtn = document.getElementById("nextBtn");
+    const warning = document.getElementById("submit-warning");
+
+    const quizQuestions = [
+      { question: "1. What does IaaS stand for in cloud computing?", options: ["Internet as a Service", "Infrastructure as a Service", "Interface as a Service", "Integration as a Service"], answer: "Infrastructure as a Service" },
+      { question: "2. Which of these is not a type of cloud deployment model?", options: ["Public Cloud", "Private Cloud", "Mixed Cloud", "Hybrid Cloud"], answer: "Mixed Cloud" },
+      { question: "3. Which of the following is not a benefit of cloud computing?", options: ["Scalability", "High maintenance cost", "Flexibility", "Disaster recovery"], answer: "High maintenance cost" },
+      { question: "4. Which company is not a cloud computing service provider?", options: ["Google", "Amazon", "Microsoft", "Nokia"], answer: "Nokia" },
+      { question: "5. What is the main advantage of using PaaS?", options: ["Control over hardware", "No infrastructure management", "Offers physical data centers", "Cheaper than all models"], answer: "No infrastructure management" },
+      { question: "6. What does SaaS stand for?", options: ["Software as a Service", "System as a Solution", "Storage as a Service", "Security as a Software"], answer: "Software as a Service" },
+      { question: "7. Which model lets customers manage the app but not infrastructure?", options: ["SaaS", "PaaS", "IaaS", "DaaS"], answer: "PaaS" },
+      { question: "8. What enables virtualization in cloud computing?", options: ["Containers", "Hypervisor", "Compiler", "Load Balancer"], answer: "Hypervisor" },
+      { question: "9. Which service model has the highest abstraction?", options: ["IaaS", "PaaS", "SaaS", "DBaaS"], answer: "SaaS" }
+    ];
+
+    form.addEventListener("submit", function(e) {
+      e.preventDefault();
+      const username = document.getElementById("username").value.trim();
+      const password = document.getElementById("password").value.trim();
+
+      if (isRegistering) {
+        registeredUsername = username;
+        registeredPassword = password;
+        statusMsg.innerText = "Registration successful! Please log in.";
+        actionButton.innerText = "LOGIN";
+        isRegistering = false;
+        form.reset();
+      } else {
+        if (username === registeredUsername && password === registeredPassword) {
+          form.style.display = "none";
+          quizForm.style.display = "block";
+          loadQuiz();
+          showQuestion(0);
+          startTimer();
+        } else {
+          statusMsg.innerText = "Try again. LOGIN required.";
+          actionButton.innerText = "LOGIN";
+          islogin = true;
+        }
+      }
+    });
+
+    function loadQuiz() {
+      quizContainer.innerHTML = "";
+      quizQuestions.forEach((q, index) => {
+        const div = document.createElement("div");
+        div.classList.add("quiz-question");
+        div.setAttribute("data-index", index);
+        div.innerHTML = `<p>${q.question}</p>`;
+        q.options.forEach(option => {
+          const optionWrapper = document.createElement("div");
+          optionWrapper.classList.add("quiz-option");
+          const input = document.createElement("input");
+          input.type = "radio";
+          input.name = `q${index}`;
+          input.value = option;
+          input.id = `q${index}-${option}`;
+          const label = document.createElement("label");
+          label.setAttribute("for", `q${index}-${option}`);
+          label.innerText = option;
+          optionWrapper.appendChild(input);
+          optionWrapper.appendChild(label);
+          div.appendChild(optionWrapper);
+        });
+        quizContainer.appendChild(div);
+      });
+    }
+
+    function showQuestion(index) {
+      const questions = document.querySelectorAll(".quiz-question");
+      questions.forEach((q, i) => {
+        q.style.display = i === index ? "flex" : "none";
+      });
+      prevBtn.style.display = index === 0 ? "none" : "inline-block";
+      nextBtn.style.display = index === questions.length - 1 ? "none" : "inline-block";
+    }
+
+    prevBtn.addEventListener("click", () => {
+      if (currentQuestionIndex > 0) {
+        currentQuestionIndex--;
+        showQuestion(currentQuestionIndex);
+      }
+    });
+
+    nextBtn.addEventListener("click", () => {
+      if (currentQuestionIndex < quizQuestions.length - 1) {
+        currentQuestionIndex++;
+        showQuestion(currentQuestionIndex);
+      }
+    });
+
+    function startTimer() {
+      countdown = 599;
+      updateTimerDisplay();
+      timer = setInterval(() => {
+        countdown--;
+        updateTimerDisplay();
+        if (countdown <= 0) {
+          clearInterval(timer);
+          submitQuiz();
+        }
+      }, 1000);
+    }
+
+    function updateTimerDisplay() {
+      let min = Math.floor(countdown / 60).toString().padStart(1, "0");
+      let sec = (countdown % 60).toString().padStart(2, "0");
+      timerEl.innerText = `Time Left: ${min}:${sec}`;
+    }
+
+    quizForm.addEventListener("submit", function(e) {
+      e.preventDefault();
+      const allAnswered = quizQuestions.every((q, i) => {
+        return document.querySelector(`input[name="q${i}"]:checked`);
+      });
+      if (!allAnswered) {
+        warning.innerText = "Please answer all questions before submitting.";
+        return;
+      }
+      warning.innerText = "";
+      submitQuiz();
+    });
+
+    function submitQuiz() {
+      clearInterval(timer);
+      let score = 0;
+      const allQuestions = document.querySelectorAll(".quiz-question");
+      allQuestions.forEach(q => q.style.display = "flex");
+      quizQuestions.forEach((q, index) => {
+        const selected = document.querySelector(`input[name="q${index}"]:checked`);
+        const options = document.querySelectorAll(`input[name="q${index}"]`);
+        options.forEach(opt => {
+          const label = document.querySelector(`label[for="${opt.id}"]`);
+          label.classList.remove("correct-answer", "incorrect-answer");
+          if (opt.value === q.answer) {
+            label.innerHTML += " ✅";
+            label.classList.add("correct-answer");
+            if (opt.checked) score++;
+          } else if (opt.checked) {
+            label.innerHTML += " ❌";
+            label.classList.add("incorrect-answer");
+          }
+        });
+      });
+
+      finalResultMsg.innerText = `You completed the Cloud Quiz! You got ${score} out of ${quizQuestions.length} correct.`;
+
+      document.getElementById("final-submit").style.display = "none";
+      document.getElementById("navigation").style.display = "none";
+
+      setTimeout(() => {
+        // Reset all
+        quizForm.style.display = "none";
+        form.style.display = "block";
+        form.reset();
+        statusMsg.innerText = "Please register again to retake the quiz.";
+        actionButton.innerText = "REGISTER";
+        isRegistering = true;
+        finalResultMsg.innerText = "";
+        document.getElementById("final-submit").style.display = "block";
+        document.getElementById("navigation").style.display = "flex";
+        currentQuestionIndex = 0;
+        quizContainer.innerHTML = "";
+      }, 10000);
+    }
+  </script>
+</body>
+</html>
